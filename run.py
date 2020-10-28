@@ -27,8 +27,6 @@ PREDICTION = "exps/fold{n}/test_preds_and_probs.txt"
 
 
 def rerun_experiments():
-	process_folds()
-
 	print(os.getcwd())
 	for i in range(5):
 
@@ -68,14 +66,14 @@ def evaluate():
 	for k, v in results.items():
 		print(k, v, np.average(v), np.std(v))
 
-	with open("results.txt", "w") as f:
-
+	with open("5folds_results.txt", "w") as f:
 		f.write("label, [scores], mean, std\n")
 		for k, v in results.items():
 			f.write("{} {} {} {}\n".format(k, v, np.average(v), np.std(v)))
 
 
 def main():
+	# process_folds()
 	# rerun_experiments()
 	evaluate()
 

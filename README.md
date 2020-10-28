@@ -1,3 +1,8 @@
+# Nueral LP for 5folds
+
+Use `run.py` with an a appropriate virtual environment to run with the 5 folds 
+given in `datasets/5folds`.  
+
 # Neural LP
 
 This is the implementation of Neural Logic Programming, proposed in the following paper:
@@ -10,6 +15,7 @@ NIPS 2017.
 - Python 2.7
 - Numpy 
 - Tensorflow 1.0.1
+- Scikit-learn 0.20.4
 
 ## Quick start
 The following command starts training a dataset about family relations, and stores the experiment results in the folder `exps/demo/`.

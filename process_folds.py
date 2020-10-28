@@ -8,14 +8,16 @@ NUM_FOLDS = 5
 FOLDS = ["datasets/5folds/fold" + str(i + 1) for i in range(NUM_FOLDS)]
 OUTPUT_FOLDS = ["datasets/5folds-processed/fold" + str(i + 1) for i in range(NUM_FOLDS)]
 COAUTHOR_TUPLES = []
-AUTHORS = set()
+ENTITIES = {"CoAuthor"}
+RELATIONS = set()
+FACTS = list()
 
 # RANDOM_SEED = 214812934
 # random.seed(RANDOM_SEED)
 
 
 def make_entity_files():
-	auth_string = "\n".join(AUTHORS) + "\n"
+	auth_string = "\n".join(ENTITIES) + "\n"
 	for path in OUTPUT_FOLDS:
 		with open(pjoin(path, "entities.txt"), "w") as f:
 			f.write(auth_string)
@@ -25,7 +27,7 @@ def make_relations_files():
 	for path in OUTPUT_FOLDS:
 		os.makedirs(path)
 		with open(pjoin(path, "relations.txt"), "w") as f:
-			f.write("CoAuthor\n")
+			f.write("\n".join(RELATIONS) + "\n")
 
 
 def tuples_to_relation_strings(l):
@@ -58,6 +60,8 @@ def make_test_train_files():
 
 		with open(pjoin(path, "facts.txt"), "w") as f:
 			f.write(tuples_to_relation_strings(facts_p))
+			for rel, a, b in FACTS:
+				f.write("{}\t{}\t{}\n".format(a, rel, b))
 
 		with open(pjoin(path, "train.txt"), "w") as f:
 			f.write(tuples_to_relation_strings(train_p))
@@ -67,37 +71,51 @@ def make_test_train_files():
 
 
 def process_folds():
-	global FOLDS, OUTPUT_FOLDS, COAUTHOR_TUPLES, AUTHORS
+	global FOLDS, OUTPUT_FOLDS, COAUTHOR_TUPLES, ENTITIES, RELATIONS
 
 	try:
 		rmtree("datasets/5folds-processed")
 	except OSError:
 		pass
 
-	raw_pattern = r"""CoAuthor\("([\w_]+)","([\w_]+)"\)\."""
+	raw_pattern = r"""([\w]+)\("([\w_]+)","([\w_]+)"\)\."""
 	re_pattern = re.compile(raw_pattern)
 
+	with open("datasets/5folds/train_facts.txt") as f:
+		for line in f:
+			match = re_pattern.match(line.strip())
+			if match:
+				rel, a, b = match.groups()
+				RELATIONS.add(rel)
+				ENTITIES.update((a,b))
+				FACTS.append((rel, a, b))
+
+
 	for in_path in FOLDS:
+
 		neg = []
 		with open(pjoin(in_path, "neg.txt"), "r") as f:
 			for line in f.readlines():
-				if line.strip() == "":
-					pass
-				match = re_pattern.match(line).groups()
-				neg.append(match)
-				AUTHORS.update(match)
+				match = re_pattern.match(line)
+				if match:
+					rel, a, b = match.groups()
+					neg.append((a, b))
+					ENTITIES.update((a, b))
+
 		pos = []
 		with open(pjoin(in_path, "pos.txt"), "r") as f:
 			for line in f.readlines():
-				if line.strip() == "":
-					pass
-				match = re_pattern.match(line).groups()
-				pos.append(match)
-				AUTHORS.update(match)
+				match = re_pattern.match(line)
+				if match:
+					rel, a, b = match.groups()
+					pos.append((a, b))
+					ENTITIES.update((a, b))
 
 		COAUTHOR_TUPLES.append((pos, neg))
 
-	AUTHORS = list(AUTHORS)
+		COAUTHOR_TUPLES.append((pos, neg))
+
+	ENTITIES = list(ENTITIES)
 
 	make_relations_files()
 	make_entity_files()
