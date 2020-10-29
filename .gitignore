@@ -2,4 +2,4 @@
 *.pckl
 datasets/*/all.txt
 datasets/5folds-processed
-exps/*
+exps/

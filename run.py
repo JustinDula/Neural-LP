@@ -9,7 +9,6 @@ from sklearn.metrics import roc_auc_score, average_precision_score, f1_score, pr
 
 from process_folds import process_folds
 
-SETUP = "python2 src/process_folds.py"
 COMMANDS = [
 	"python2 src/main.py --datadir=datasets/5folds-processed/fold{n} --exps_dir=exps/ --exp_name=fold{n}"
 	" --max_epoch=100 --get_phead",
@@ -21,7 +20,7 @@ COMMANDS = [
 ]
 
 PREDICTION = "exps/fold{n}/test_preds_and_probs.txt"
-THRESHOLD = .2
+THRESHOLD = .05
 
 
 def rerun_experiments():
@@ -38,50 +37,53 @@ def rerun_experiments():
 
 
 def evaluate():
-	PredictionInfo = namedtuple("PredictionInfo", "true_labels, pred_label, matches, probs, test_size")
+	PredictionInfo = namedtuple("PredictionInfo", "true_labels, pred_labels, matches, probs")
 
 	# auc roc, auc pr, precision, recall, f1
-	true_labels_per_fold = []
 	results = []
 	for i in range(5):
 		path = PREDICTION.format(n=i+1)
 		matches = []
 		probs = []
+		pred_labels = []
 		with open(path, "r") as f:
 			for line in f.readlines():
 				l = line.split(",")
 				match = l[1] == l[3]
 				p = float(l[-1])
-				pred_label = 1 if p >= THRESHOLD else 0
+
+				pred_label = 1 if match else 0
+				pred_labels.append(pred_label)
 				matches.append(match)
 				probs.append(p)
 
-		with open("datasets/5folds-processed/fold{n}/labels.txt".format(n=i+1), "r") as f:
-			labels = [int(x) for x in f.readlines() if x.strip() != ""]
+		with open("datasets/5folds-processed/fold{}/labels.txt".format(i+1)) as f:
+			true_labels = [int(x.strip().split(",")[-1]) for x in f.readlines()]
 
-		results.append(PredictionInfo(true_labels=labels, matches=matches, probs=probs))
+		assert len(true_labels) == len(pred_labels)
+		results.append(PredictionInfo(true_labels=true_labels, pred_labels=pred_labels, matches=matches, probs=probs))
 
 	results = {
 		"auc roc": [roc_auc_score(p.true_labels, p.probs) for p in results],
 		"auc pr": [average_precision_score(p.true_labels, p.probs) for p in results],
-		"precision": [precision_score(p.true_labels, p) for p in results],
-		"recall": [recall_score(p.true_labels, l) for p in results],
-		"f1s": [f1_score(p.true_labels, p.pred_label) for p in results]
+		"precision": [precision_score(p.true_labels, p.pred_labels) for p in results],
+		"recall": [recall_score(p.true_labels, p.pred_labels) for p in results],
+		"f1s": [f1_score(p.true_labels, p.pred_labels) for p in results]
 	}
 
 	print("label, [scores], mean, std")
 	for k, v in results.items():
 		print(k, v, np.average(v), np.std(v))
 
-	with open("5folds_results.txt", "w") as f:
+	with open("coauthor_results.txt", "w") as f:
 		f.write("label, [scores], mean, std\n")
 		for k, v in results.items():
 			f.write("{} {} {} {}\n".format(k, v, np.average(v), np.std(v)))
 
 
 def main():
-	# process_folds()
-	# rerun_experiments()
+	process_folds()
+	rerun_experiments()
 	evaluate()
 
 

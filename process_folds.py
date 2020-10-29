@@ -73,7 +73,12 @@ def make_test_train_files():
 		labels = ([1] * (len(test_p) * 2)) + ([0] * (len(test_n) * 2))
 
 		with open(pjoin(path, "labels.txt"), "w") as f:
-			f.write("\n".join(str(x) for x in labels) + "\n")
+			for a,b in test_p:
+				f.write("{},{},1\n".format(a, b))
+				f.write("{},{},1\n".format(b, a))
+			for a,b in test_n:
+				f.write("{},{},0\n".format(a, b))
+				f.write("{},{},0\n".format(b, a))
 
 
 def process_folds():
