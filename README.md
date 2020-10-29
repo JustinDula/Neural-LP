@@ -3,6 +3,11 @@
 Use `run.py` with an a appropriate virtual environment to run with the 5 folds 
 given in `datasets/5folds`.  
 
+The output is given in `coauthor_results.txt`. 
+A link prediction is treated as true iff the most probable completion
+matches the true completion.
+
+# Author Readme
 # Neural LP
 
 This is the implementation of Neural Logic Programming, proposed in the following paper:
