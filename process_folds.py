@@ -8,8 +8,8 @@ NUM_FOLDS = 5
 FOLDS = ["datasets/5folds/fold" + str(i + 1) for i in range(NUM_FOLDS)]
 OUTPUT_FOLDS = ["datasets/5folds-processed/fold" + str(i + 1) for i in range(NUM_FOLDS)]
 COAUTHOR_TUPLES = []
-ENTITIES = {"CoAuthor"}
-RELATIONS = set()
+ENTITIES = set()
+RELATIONS = {"CoAuthor"}
 FACTS = list()
 
 # RANDOM_SEED = 214812934
@@ -31,7 +31,7 @@ def make_relations_files():
 
 
 def tuples_to_relation_strings(l):
-	str_list = [a + "\tCoAuthor\t" + b for a,b in l]
+	str_list = [a + "\tCoAuthor\t" + b for a, b in l]
 	return "\n".join(str_list) + "\n"
 
 
@@ -68,6 +68,12 @@ def make_test_train_files():
 
 		with open(pjoin(path, "test.txt"), "w") as f:
 			f.write(tuples_to_relation_strings(test_p))
+			f.write(tuples_to_relation_strings(test_n))
+
+		labels = ([1] * (len(test_p) * 2)) + ([0] * (len(test_n) * 2))
+
+		with open(pjoin(path, "labels.txt"), "w") as f:
+			f.write("\n".join(str(x) for x in labels) + "\n")
 
 
 def process_folds():
@@ -89,7 +95,6 @@ def process_folds():
 				RELATIONS.add(rel)
 				ENTITIES.update((a,b))
 				FACTS.append((rel, a, b))
-
 
 	for in_path in FOLDS:
 
@@ -114,8 +119,6 @@ def process_folds():
 		COAUTHOR_TUPLES.append((pos, neg))
 
 		COAUTHOR_TUPLES.append((pos, neg))
-
-	ENTITIES = list(ENTITIES)
 
 	make_relations_files()
 	make_entity_files()

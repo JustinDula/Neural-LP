@@ -2,15 +2,12 @@ from __future__ import print_function
 
 import os
 from shutil import rmtree
+from collections import namedtuple
 
 import numpy as np
 from sklearn.metrics import roc_auc_score, average_precision_score, f1_score, precision_score, recall_score
 
 from process_folds import process_folds
-
-"""
-Names are ranked in 
-"""
 
 SETUP = "python2 src/process_folds.py"
 COMMANDS = [
@@ -24,6 +21,7 @@ COMMANDS = [
 ]
 
 PREDICTION = "exps/fold{n}/test_preds_and_probs.txt"
+THRESHOLD = .2
 
 
 def rerun_experiments():
@@ -34,32 +32,41 @@ def rerun_experiments():
 			rmtree("exps/fold" + str(i + 1))
 		except OSError:
 			pass
-
+		os.makedirs("exps/fold" + str(i+1))
 		for command in COMMANDS:
 			os.system(command.format(n=i + 1))
 
 
 def evaluate():
-	# auc roc, auc pr, precision, recall, f1
+	PredictionInfo = namedtuple("PredictionInfo", "true_labels, pred_label, matches, probs, test_size")
 
+	# auc roc, auc pr, precision, recall, f1
+	true_labels_per_fold = []
 	results = []
 	for i in range(5):
 		path = PREDICTION.format(n=i+1)
-		labels = []
+		matches = []
 		probs = []
 		with open(path, "r") as f:
 			for line in f.readlines():
 				l = line.split(",")
-				labels.append(1 if l[1] == l[3] else 0)
-				probs.append(float(l[-1]))
-		results.append((labels, probs))
+				match = l[1] == l[3]
+				p = float(l[-1])
+				pred_label = 1 if p >= THRESHOLD else 0
+				matches.append(match)
+				probs.append(p)
+
+		with open("datasets/5folds-processed/fold{n}/labels.txt".format(n=i+1), "r") as f:
+			labels = [int(x) for x in f.readlines() if x.strip() != ""]
+
+		results.append(PredictionInfo(true_labels=labels, matches=matches, probs=probs))
 
 	results = {
-		"auc roc": [roc_auc_score(l, p) for l, p in results],
-		"auc pr": [average_precision_score(l, p) for l, p in results],
-		"precision": [precision_score([1 for _ in l], l) for l, _ in results],
-		"recall": [recall_score([1 for _ in l], l) for l, _ in results],
-		"f1s": [f1_score([1 for _ in l], l) for l, _ in results]
+		"auc roc": [roc_auc_score(p.true_labels, p.probs) for p in results],
+		"auc pr": [average_precision_score(p.true_labels, p.probs) for p in results],
+		"precision": [precision_score(p.true_labels, p) for p in results],
+		"recall": [recall_score(p.true_labels, l) for p in results],
+		"f1s": [f1_score(p.true_labels, p.pred_label) for p in results]
 	}
 
 	print("label, [scores], mean, std")
